@@ -1,0 +1,26 @@
+---
+- name: Retrieve kubeadm join command from Ansible server and save to master node
+  hosts: all
+  become: true
+  tasks:
+    - name: Copy kubeadm_init_output.txt from Ansible server to master node
+      copy:
+        src: "{{ playbook_dir }}/kubeadm_init_output.txt"  
+        dest: "./kubeadm_init_output.txt"  
+
+    - name: Read kubeadm init output file on master node
+      slurp:
+        src: "./kubeadm_init_output.txt"
+      register: kubeadm_init_content
+
+    - name: Decode the base64 content of kubeadm init output
+      set_fact:
+        decoded_kubeadm_content: "{{ kubeadm_init_content.content | b64decode }}"
+
+
+    - name: Run kubeadm join command
+      command: "{{ decoded_kubeadm_content }}"
+
+    - name: Show kubeadm command
+      debug:
+        msg: "{{ decoded_kubeadm_content }}"

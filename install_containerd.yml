@@ -1,0 +1,51 @@
+---
+- name: Install and Configure Containerd on Kubernetes Nodes
+  hosts: all
+  become: true
+  tasks:
+
+    - name: Load overlay module
+      modprobe:
+        name: overlay
+        state: present
+
+    - name: Load br_netfilter module
+      modprobe:
+        name: br_netfilter
+        state: present
+
+    - name: Ensure overlay and br_netfilter modules load on boot
+      copy:
+        dest: /etc/modules-load.d/containerd.conf
+        content: |
+          overlay
+          br_netfilter
+
+    - name: Create containerd configuration directory
+      file:
+        path: /etc/containerd
+        state: directory
+        mode: '0755'
+
+    - name: Generate default containerd configuration
+      shell: "containerd config default | tee /etc/containerd/config.toml"
+
+    - name: Set SystemdCgroup to true in containerd config
+      replace:
+        path: /etc/containerd/config.toml
+        regexp: 'SystemdCgroup = false'
+        replace: 'SystemdCgroup = true'
+
+    - name: Restart containerd service
+      systemd:
+        name: containerd
+        state: restarted
+        enabled: true
+
+    - name: Verify containerd configuration
+      shell: "containerd config dump"
+      register: containerd_config_output
+
+    - name: Display containerd configuration output
+      debug:
+        var: containerd_config_output.stdout

@@ -1,0 +1,36 @@
+---
+- name: Initialize Kubernetes Cluster on Master Node
+  hosts: master_k
+  become: true
+  tasks:
+
+    - name: Initialize Kubernetes master node with containerd as the container runtime
+      command: kubeadm init --pod-network-cidr 10.244.0.0/16 --cri-socket /run/containerd/containerd.sock
+      register: kubeadm_init_output
+
+
+    - name: Get the full kubeadm join command
+      command: kubeadm token create --print-join-command
+      register: join_command_output
+
+    - name: Save kubeadm init output to a local file on the Ansible control machine
+      copy:
+        content: "{{ join_command_output.stdout }}"
+        dest: "./kubeadm_init_output.txt"
+      delegate_to: localhost 
+
+    - name: Create kubeconfig directory if not exists
+      shell: | 
+        mkdir -p $HOME/.kube
+
+    - name: Copy admin.conf to kubeconfig
+      shell: |
+        sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+
+
+    - name: Change ownership of kubeconfig file
+      shell: | 
+        sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+    - name: Apply Flannel network YAML
+      command: kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml

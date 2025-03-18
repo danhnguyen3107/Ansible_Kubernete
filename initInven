@@ -1,0 +1,10 @@
+[Worker]
+192.168.159.128 ansible_ssh_user=danh
+
+[multi:children]
+Worker
+
+# Variable for all the servers
+[multi:vars]
+ansible_ssh_user=danh
+ansible_ssh_private_key_file=~/.ssh/id_rsa
